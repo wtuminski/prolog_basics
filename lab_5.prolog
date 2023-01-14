@@ -55,34 +55,23 @@ timetable(zurich, london,
     ]
 ).
 
+deptime([_-_:_:Dep|_],Dep).
 
+transfer(H1:M1,H2:M2) :- 60 * (H2-H1) + M2 - M1 >= 40.
 
-matchingFlightDay([_,_,_,alldays],_).
-matchingFlightDay([_,_,_,Days],Day) :-
-    member(Day,Days).
+flyday(Day,Daylist) :- member(Day,Daylist).
+flyday(Day,alldays) :- member(Day,[mo,tu,we,th,fr,sa,su]).
 
-findMatchingFlight(
-    [Flight|OtherFlights],
-    Day,
-    MatchingFlight
-) :-
-  matchingFlightDay(Flight,Day),
-  append([],Flight,MatchingFlight);
-  findMatchingFlight(OtherFlights, Day, MatchingFlight).
+flight(DeparturePlace,ArrivalPlace,Day,FlightNumber,Deptime,Arrtime) :-
+   timetable(DeparturePlace,ArrivalPlace,Flightlist),
+   member([Deptime,Arrtime,FlightNumber,Daylist],Flightlist),
+   flyday(Day,Daylist).
 
-getRouteString(
-    DeparturePlace,
-    ArrivalPlace,
-    [HH:MM,_,FlightNumber|_],
-    RouteString
-) :-
-    atomic_list_concat([DeparturePlace,-,ArrivalPlace,:,FlightNumber,:,HH,:,MM],RouteString).
-
-route(DeparturePlace,ArrivalPlace,Day,Route) :-
-    timetable(
-        DeparturePlace,
-        ArrivalPlace,
-        Flights
-    ),
-    findMatchingFlight(Flights,Day,MatchingFlight),
-    getRouteString(DeparturePlace,ArrivalPlace,MatchingFlight,Route).
+route(DeparturePlace,ArrivalPlace,Day,[DeparturePlace-ArrivalPlace:FlightNumber:Deptime]) :-
+   flight(DeparturePlace,ArrivalPlace,Day,FlightNumber,Deptime,_).
+   
+route(DeparturePlace,ArrivalPlace,Day,[DeparturePlace-TransferPlace:FlightNumber1:DepTime1|Route]) :-
+   route(TransferPlace,ArrivalPlace,Day,Route),
+   flight(DeparturePlace,TransferPlace,Day,FlightNumber1,DepTime1,Arr1),
+   deptime(Route,DepTime2),
+   transfer(Arr1,DepTime2).
